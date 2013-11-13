@@ -9,45 +9,35 @@
 #import <QuartzCore/QuartzCore.h>
 
 @interface STKSpinnerView ()
-@property (nonatomic, assign) CALayer *imageLayer;
-@property (nonatomic, assign) CALayer *maskLayer;
 @property (nonatomic, assign) CAShapeLayer *wellLayer;
 @property (nonatomic, assign) CAShapeLayer *spinLayer;
 @end
 
 @implementation STKSpinnerView
-@dynamic image;
 
 - (void)_commonInit
 {
-    CALayer *l = [CALayer layer];
-    [[self layer] addSublayer:l];
-    [self setImageLayer:l];
-    
-    CALayer *m = [CALayer layer];
-    [[self imageLayer] setMask:m];
-    [self setMaskLayer:m];
     
     CAShapeLayer *w = [CAShapeLayer layer];
     [[self layer] addSublayer:w];
-    [w setStrokeColor:[[UIColor grayColor] CGColor]];
+    [w setStrokeColor:[[UIColor whiteColor] CGColor]];
     [w setFillColor:[[UIColor clearColor] CGColor]];
     [w setShadowColor:[[UIColor darkGrayColor] CGColor]];
     [w setShadowRadius:2];
     [w setShadowOpacity:1];
     [w setShadowOffset:CGSizeZero];
     [self setWellLayer:w];
-
+    
     CAShapeLayer *s = [CAShapeLayer layer];
     [s setStrokeColor:[[UIColor blueColor] CGColor]];
     [s setFillColor:[[UIColor clearColor] CGColor]];
     [[self layer] addSublayer:s];
     [self setSpinLayer:s];
-
+    
     [self setBackgroundColor:[UIColor clearColor]];
     
-    [self setWellThickness:8.0];
-    [self setColor:[UIColor colorWithRed:0.2 green:0.5 blue:0.8 alpha:1]];
+    [self setWellThickness:4.0];
+    [self setColor:[UIColor colorWithRed:255/255.0 green:140/255.0 blue:0 alpha:1]];
     [self setProgress:0.0];
 }
 
@@ -67,16 +57,6 @@
         [self _commonInit];
     }
     return self;
-}
-
-- (void)setImage:(UIImage *)image
-{
-    [[self imageLayer] setContents:(id)[image CGImage]];
-}
-
-- (UIImage *)image
-{
-    return [UIImage imageWithCGImage:(CGImageRef)[[self imageLayer] contents]];
 }
 
 - (void)setWellThickness:(float)wellThickness
@@ -139,15 +119,33 @@
                                                          startAngle:-M_PI_2 endAngle:(2.0 * M_PI - M_PI_2) clockwise:YES];
     [[self wellLayer] setPath:[outerPath CGPath]];
     [[self spinLayer] setPath:[outerPath CGPath]];
-        
-    [[self imageLayer] setFrame:bounds];
-    [[self maskLayer] setFrame:bounds];
     [[self spinLayer] setFrame:bounds];
-
+    
     UIGraphicsBeginImageContextWithOptions(bounds.size, NO, [[UIScreen mainScreen] scale]);
     [innerPath fill];
-    [[self maskLayer] setContents:(id)[UIGraphicsGetImageFromCurrentImageContext() CGImage]];
     UIGraphicsEndImageContext();
+}
+
+- (void)drawRect:(CGRect)rect
+{
+    [super drawRect:rect];
+    
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextFillEllipseInRect(context, rect);
+    
+    CGContextSaveGState(context);
+    
+    //  This will avoid the image flipping
+    CGContextTranslateCTM(context, 0, rect.size.height);
+    CGContextScaleCTM(context, 1.0, -1.0);
+    
+    //  Add a mask to the image that will be drawn
+    CGImageRef alphaMask = CGBitmapContextCreateImage(context);
+    CGContextClipToMask(context, rect, alphaMask);
+    CGContextDrawImage(context, rect, self.image.CGImage);
+    CGImageRelease(alphaMask);
+    CGContextRestoreGState(context);
+    
 }
 
 
